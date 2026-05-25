@@ -96,28 +96,51 @@
     <div id="status"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jsonrepair/lib/umd/jsonrepair.min.js"></script>
 <script>
+// Встроенный умный исправитель кода (работает автономно)
+function smartRepair(str) {
+    // 1. Вырезаем любые комментарии
+    str = str.replace(/\/\/.*$/gm, '');
+    str = str.replace(/\/\*[\s\S]*?\*\//g, '');
+    
+    // 2. Исправляем одинарные кавычки на двойные
+    str = str.replace(/'/g, '"');
+    
+    // 3. Исправляем ключи объектов, если они забыты без кавычек
+    str = str.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+    
+    // 4. Убираем висячие запятые перед закрывающими скобками
+    str = str.replace(/,\s*([\]}])/g, '$1');
+    
+    // 5. Авто-баланс пропущенных скобок в конце
+    let openBraces = (str.match(/\{/g) || []).length;
+    let closeBraces = (str.match(/\}/g) || []).length;
+    let openBrackets = (str.match(/\[/g) || []).length;
+    let closeBrackets = (str.match(/\]/g) || []).length;
+
+    if (openBrackets > closeBrackets) str += "]".repeat(openBrackets - closeBrackets);
+    if (openBraces > closeBraces) str += "}".repeat(openBraces - closeBraces);
+    
+    return str;
+}
+
 function perfectFixJson() {
     const rawInput = document.getElementById("json-raw").value;
     const cleanOutput = document.getElementById("json-clean");
     const statusDiv = document.getElementById("status");
 
-    let text = rawInput.trim();
-
-    if (!text) {
+    if (!rawInput.trim()) {
         statusDiv.style.color = "#ffa502";
         statusDiv.innerText = "⚠️ Поле ввода пустое!";
         return;
     }
 
     try {
-        text = text.replace(/\/\/.*$/gm, '');
-        text = text.replace(/\/\*[\s\S]*?\*\//g, '');
+        // Запускаем встроенное исправление
+        let repaired = smartRepair(rawInput);
 
-        let repairedText = jsonrepair.jsonrepair(text);
-
-        const parsedJson = JSON.parse(repairedText);
+        // Проверяем и красиво форматируем
+        const parsedJson = JSON.parse(repaired);
         const beautifulResult = JSON.stringify(parsedJson, null, 2);
 
         cleanOutput.value = beautifulResult;
@@ -127,7 +150,7 @@ function perfectFixJson() {
     } catch (error) {
         cleanOutput.value = "";
         statusDiv.style.color = "#ff4757";
-        statusDiv.innerText = "❌ Не удалось автоматически собрать структуру. Ошибка: " + error.message;
+        statusDiv.innerText = "❌ Ошибка структуры. Проверьте правильность текста.";
     }
 }
 
@@ -146,7 +169,6 @@ function copyResult() {
     
     const oldStatus = statusDiv.innerText;
     const oldColor = statusDiv.style.color;
-    
     statusDiv.style.color = "#2ed573";
     statusDiv.innerText = "📋 Код успешно скопирован в буфер обмена!";
     

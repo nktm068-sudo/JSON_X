@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON_X — Умный Восстановитель Кода 🪄</title>
+    <style>
+        :root {
+            --bg: #141419;
+            --bg-card: #1f1f26;
+            --text: #ffffff;
+            --primary: #2ed573;
+            --error: #ff4757;
+            --accent: #ffa502;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+        h1 { margin-top: 0; color: var(--primary); text-align: center; font-size: 28px; }
+        p { text-align: center; color: #a4b0be; margin-bottom: 25px; }
+        .panels { display: flex; gap: 20px; }
+        @media (max-width: 768px) { .panels { flex-direction: column; } }
+        .panel { flex: 1; display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 10px; font-size: 15px; color: var(--accent); }
+        textarea {
+            width: 100%;
+            height: 400px;
+            background: #0d0d11;
+            color: #2ed573;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+        textarea:focus { border-color: var(--primary); outline: none; }
+        .buttons { display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
+        button {
+            padding: 18px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn-fix { background-color: var(--primary); color: white; }
+        .btn-copy { background-color: var(--accent); color: white; }
+        .btn-clear { background-color: #57606f; color: white; }
+        #status { margin-top: 20px; font-weight: bold; font-size: 16px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🪄 JSON_X — ИИ-Восстановитель Поврежденного Кода</h1>
+    <p>Этот инструмент полностью чинит синтаксис, закрывает скобки, расставляет кавычки и удаляет комментарии.</p>
+    
+    <div class="panels">
+        <div class="panel">
+            <label>Сломанный код (с любыми ошибками):</label>
+            <textarea id="json-raw" placeholder="// Вставь сюда код с пропущенными кавычками, запятыми или скобками..."></textarea>
+        </div>
+        <div class="panel">
+            <label>Идеальный исправленный JSON (кликни для авто-выделения):</label>
+            <textarea id="json-clean" readonly onclick="this.select()" placeholder="Здесь появится чистый и рабочий код..."></textarea>
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button class="btn-fix" onclick="perfectFixJson()">🪄 Исправить на 100%</button>
+        <button class="btn-copy" onclick="copyResult()">📋 Скопировать код</button>
+        <button class="btn-clear" onclick="clearAll()">🗑️ Очистить</button>
+    </div>
+
+    <div id="status"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsonrepair/lib/umd/jsonrepair.min.js"></script>
+<script>
+function perfectFixJson() {
+    const rawInput = document.getElementById("json-raw").value;
+    const cleanOutput = document.getElementById("json-clean");
+    const statusDiv = document.getElementById("status");
+
+    let text = rawInput.trim();
+
+    if (!text) {
+        statusDiv.style.color = "#ffa502";
+        statusDiv.innerText = "⚠️ Поле ввода пустое!";
+        return;
+    }
+
+    try {
+        text = text.replace(/\/\/.*$/gm, '');
+        text = text.replace(/\/\*[\s\S]*?\*\//g, '');
+
+        let repairedText = jsonrepair.jsonrepair(text);
+
+        const parsedJson = JSON.parse(repairedText);
+        const beautifulResult = JSON.stringify(parsedJson, null, 2);
+
+        cleanOutput.value = beautifulResult;
+        statusDiv.style.color = "#2ed573";
+        statusDiv.innerText = "✅ Код успешно восстановлен на 100% и очищен от комментариев!";
+
+    } catch (error) {
+        cleanOutput.value = "";
+        statusDiv.style.color = "#ff4757";
+        statusDiv.innerText = "❌ Не удалось автоматически собрать структуру. Ошибка: " + error.message;
+    }
+}
+
+function copyResult() {
+    const cleanOutput = document.getElementById("json-clean");
+    const statusDiv = document.getElementById("status");
+
+    if (!cleanOutput.value) {
+        statusDiv.style.color = "#ffaf40";
+        statusDiv.innerText = "⚠️ Нечего копировать! Сначала исправьте код.";
+        return;
+    }
+
+    cleanOutput.select();
+    document.execCommand("copy");
+    
+    const oldStatus = statusDiv.innerText;
+    const oldColor = statusDiv.style.color;
+    
+    statusDiv.style.color = "#2ed573";
+    statusDiv.innerText = "📋 Код успешно скопирован в буфер обмена!";
+    
+    setTimeout(() => {
+        statusDiv.innerText = oldStatus;
+        statusDiv.style.color = oldColor;
+    }, 2000);
+}
+
+function clearAll() {
+    document.getElementById("json-raw").value = "";
+    document.getElementById("json-clean").value = "";
+    document.getElementById("status").innerText = "";
+}
+</script>
+</body>
+</html>
